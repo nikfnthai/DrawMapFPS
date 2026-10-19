@@ -1,102 +1,90 @@
 import sys
-import pygame
+import tkinter as tk
 
-# Inizializzazione di Pygame
-pygame.init()
-WIDTH, HEIGHT = 800, 600
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("DrawMap FPS - Game Engine")
-clock = pygame.time.Clock()
-
-# Leggi la modalità passata dal launcher
+# Leggi la modalità passata dal launcher (default: FFA)
 mode = sys.argv[1] if len(sys.argv) > 1 else "FFA"
 
-# Stati del gioco: 'DRAW' (disegni la mappa) o 'PLAY' (sparatutto)
-game_state = "DRAW"
+# Configurazione della finestra di gioco
+root = tk.Tk()
+root.title(f"DrawMap FPS - Modalità: {mode}")
+root.geometry("800x600")
+root.configure(bg="#1e1e28")
 
-# Liste per tracciare le linee disegnate dai giocatori
-lines = []
-drawing = False
-start_pos = None
+# Titolo della modalità in alto
+lbl_mode = tk.Label(
+    root,
+    text=(
+        f"MODALITÀ: {mode} | Trascina il mouse per disegnare i muri della mappa"
+    ),
+    font=("Helvetica", 12, "bold"),
+    bg="#1e1e28",
+    fg="#00ffc8",
+)
+lbl_mode.pack(pady=10)
 
-# Posizione del giocatore
-player_x, player_y = WIDTH // 2, HEIGHT // 2
-player_angle = 0
+# Canvas per disegnare la mappa e muoversi
+canvas = tk.Canvas(root, bg="#14141c", width=760, height=450, highlightthickness=0)
+canvas.pack(pady=10)
 
-running = True
-while running:
-  screen.fill((30, 30, 40))  # Sfondo scuro stile arena spaziale
+# Posizione iniziale del "giocatore"
+player = canvas.create_oval(380, 220, 400, 240, fill="#ffff00", outline="")
 
-  for event in pygame.event.get():
-    if event.type == pygame.QUIT:
-      running = False
+# Variabili per il disegno
+start_x, start_y = None, None
 
-    # Fase 1: Disegno della mappa (clicca e trascina per creare muri/strutture)
-    if game_state == "DRAW":
-      if event.type == pygame.MOUSEBUTTONDOWN:
-        drawing = True
-        start_pos = event.pos
-      elif event.type == pygame.MOUSEBUTTONUP and drawing:
-        drawing = False
-        end_pos = event.pos
-        lines.append((start_pos, end_pos))
-      elif event.type == pygame.KEYDOWN:
-        if event.key == pygame.K_RETURN:
-          # Premi INVIO per passare alla fase di gioco/sparo
-          game_state = "PLAY"
 
-    # Fase 2: Gioco FPS
-    elif game_state == "PLAY":
-      if event.type == pygame.KEYDOWN:
-        if event.key == pygame.K_ESCAPE:
-          game_state = "DRAW"  # Torna a disegnare premendo ESC
+def on_press(event):
+  global start_x, start_y
+  start_x, start_y = event.x, event.y
 
-  # Logica di movimento nella fase PLAY
-  if game_state == "PLAY":
-    keys = pygame.key.get_pressed()
-    if keys[pygame.K_w]:
-      player_y -= 5
-    if keys[pygame.K_s]:
-      player_y += 5
-    if keys[pygame.K_a]:
-      player_x -= 5
-    if keys[pygame.K_d]:
-      player_x += 5
 
-  # --- DISEGNO A SCHERMO ---
-  # Disegna tutte le linee create dai giocatori
-  for line in lines:
-    pygame.draw.line(screen, (0, 255, 200), line[0], line[1], 6)
-
-  if drawing and start_pos:
-    current_pos = pygame.mouse.get_pos()
-    pygame.draw.line(screen, (255, 100, 100), start_pos, current_pos, 4)
-
-  # Interfaccia testuale a schermo
-  font = pygame.font.SysFont(None, 24)
-  if game_state == "DRAW":
-    mode_text = font.render(
-        f"MODALITA: {mode} | FASE: DISEGNO MAPPA (Trascina il mouse, premi"
-        " INVIO per giocare)",
-        True,
-        (255, 255, 255),
+def on_drag(event):
+  # Disegna linee in tempo reale mentre trascini il mouse
+  if start_x and start_y:
+    canvas.create_line(
+        start_x,
+        start_y,
+        event.x,
+        event.y,
+        fill="#00ffc8",
+        width=4,
+        tags="map_line",
     )
-  else:
-    mode_text = font.render(
-        f"MODALITA: {mode} | FASE: FPS ACTION (Usa WASD per muoverti, ESC per"
-        " modificare la mappa)",
-        True,
-        (255, 255, 255),
-    )
-    # Disegna il "giocatore" al centro
-    pygame.draw.circle(
-        screen, (255, 255, 0), (int(player_x), int(player_y)), 10
-    )
+    canvas.update()
 
-  screen.blit(mode_text, (20, 20))
 
-  pygame.display.flip()
-  clock.tick(60)
+canvas.bind("<Button-1>", on_press)
+canvas.bind("<B1-Motion>", on_drag)
 
-pygame.quit()
-sys.exit()
+# Controlli di movimento con i tasti WASD
+player_speed = 10
+
+
+def move(event):
+  key = event.keysym.lower()
+  if key == "w":
+    canvas.move(player, 0, -player_speed)
+  elif key == "s":
+    canvas.move(player, 0, player_speed)
+  elif key == "a":
+    canvas.move(player, -player_speed, 0)
+  elif key == "d":
+    canvas.move(player, player_speed, 0)
+
+
+root.bind("<KeyPress>", move)
+
+# Pulsante per chiudere o resettare
+btn_frame = tk.Frame(root, bg="#1e1e28")
+btn_frame.pack(pady=5)
+
+lbl_info = tk.Label(
+    btn_frame,
+    text="Usa i tasti W, A, S, D per muovere il giocatore sulla mappa disegnata!",
+    font=("Helvetica", 10),
+    bg="#1e1e28",
+    fg="white",
+)
+lbl_info.pack()
+
+root.mainloop()
