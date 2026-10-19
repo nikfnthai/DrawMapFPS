@@ -17,7 +17,7 @@ def launch_game(mode):
 root = tk.Tk()
 root.title("DrawMap Launcher")
 root.geometry("400x350")
-root.configure(corner_radius=10)
+# (Riga rimossa per evitare l'errore TclError)
 
 # Titolo
 title_label = tk.Label(
